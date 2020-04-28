@@ -188,15 +188,14 @@ package classes.chart.parse
 
         public function parseChart(data:ByteArray):void
         {
-            var beatbox:Array = Beatbox.parseBeatbox(data);
-            if (beatbox)
+            var colours:Array = ["red", "blue", "yellow", "orange", "purple", "pink", "green", "cyan", "white"];
+
+            for (var i:uint = 60; i < 16000; i++)
             {
-                for each (var beat:Object in beatbox)
-                {
-                    var beatPos:int = beat[0] + (song.sync || 0);
-                    if (ChartFFRBeatbox.isValidDirection(beat[1]))
-                        Notes.push(new Note(beat[1], beatPos / framerate, beat[2] || "blue", beatPos));
-                }
+                Notes.push(new Note("L", i / framerate, colours[Math.abs(Math.floor(Math.random() * 10)) % 9], i));
+                Notes.push(new Note("D", i / framerate, colours[Math.abs(Math.floor(Math.random() * 10)) % 9], i));
+                Notes.push(new Note("R", i / framerate, colours[Math.abs(Math.floor(Math.random() * 10)) % 9], i));
+                Notes.push(new Note("U", i / framerate, colours[Math.abs(Math.floor(Math.random() * 10)) % 9], i));
             }
         }
     }

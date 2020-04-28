@@ -44,7 +44,7 @@ package game
     import game.controls.ComboStatic;
     import game.controls.Judge;
     import game.controls.MPHeader;
-    import game.controls.NoteBox;
+    import game.controls.NoteBoxBlitted;
     import game.controls.PAWindow;
     import game.controls.Score;
     import it.gotoandplay.smartfoxserver.SFSEvent;
@@ -100,7 +100,7 @@ package game
         private var displayBlackBG:Sprite;
         private var gameplayUI:*;
         private var progressDisplay:ProgressBar;
-        private var noteBox:NoteBox;
+        private var noteBox:NoteBoxBlitted;
         private var paWindow:PAWindow;
         private var score:Score;
         private var combo:Combo;
@@ -374,7 +374,7 @@ package game
 
         private function initUI():void
         {
-            noteBox = new NoteBox(song, options);
+            noteBox = new NoteBoxBlitted(song, options);
             noteBox.position();
             this.addChild(noteBox);
 
@@ -678,8 +678,9 @@ package game
                 nextNote = noteBox.nextNote;
             }
 
-            var notes:Array = noteBox.notes;
-            for (var n:int = 0; n < notes.length; n++)
+            var notes:Vector.<GameNote> = noteBox.notes;
+            var length:uint = notes.length;
+            for (var n:uint = 0; n < notes.length; n++)
             {
                 var curNote:GameNote = notes[n];
 
@@ -687,7 +688,8 @@ package game
                 if (options.isAutoplay && (gameProgress - curNote.PROGRESS + player1JudgeOffset) == 0)
                 {
                     judgeScore(curNote.DIR, gameProgress);
-                    n--;
+                    --n;
+                    --length;
                 }
 
                 // Remove Old note
@@ -695,8 +697,11 @@ package game
                 {
                     _binReplayNotes[curNote.ID] = null;
                     commitJudge(curNote.DIR, gameProgress, -10);
-                    noteBox.removeNote(curNote.ID);
-                    n--;
+                    if (noteBox.removeNote(curNote.ID))
+                    {
+                        --n;
+                        --length;
+                    }
                 }
             }
 

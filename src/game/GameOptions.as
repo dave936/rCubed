@@ -8,6 +8,7 @@ package game
     public class GameOptions extends Object
     {
         public var DISABLE_NOTE_POOL:Boolean = false;
+        public var BLITTING:Boolean = true;
 
         public var frameRate:int = 60;
         public var songRate:Number = 1;

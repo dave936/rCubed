@@ -2,10 +2,12 @@ package classes
 {
     import flash.display.MovieClip;
     import flash.display.Sprite;
+    import rendering.NoteBlitting;
 
-    public class GameNote extends Sprite
+    public class GameNote extends MovieClip
     {
         private static var _noteskins:Noteskins = Noteskins.instance;
+        private var _gvars:GlobalVariables = GlobalVariables.instance;
 
         private var _note:Sprite;
         public var NOTESKIN:int = 0;
@@ -16,6 +18,7 @@ package classes
         public var PROGRESS:int = 0;
         public var PLAYER:int = 0;
         public var SPAWN_PROGRESS:int = 0;
+        private var index:int;
 
         public function GameNote(id:int, dir:String, color:String, position:int = 0, progress:int = 0, player:int = 0, activeNoteSkin:int = 1)
         {
@@ -27,23 +30,36 @@ package classes
             this.PROGRESS = progress;
             this.PLAYER = player;
 
-            var _noteInfo:Object = _noteskins.getInfo(activeNoteSkin);
-            _note = _noteskins.getNote(activeNoteSkin, this.COLOR, this.DIR);
-            _note.x = -(_noteInfo.width >> 1);
-            _note.y = -(_noteInfo.height >> 1);
-            this.addChild(_note);
+            if (_gvars.options == null || !_gvars.options.BLITTING)
+            {
+                var _noteInfo:Object = _noteskins.getInfo(activeNoteSkin);
+                _note = _noteskins.getNote(activeNoteSkin, this.COLOR, this.DIR);
+                _note.x = -(_noteInfo.width >> 1);
+                _note.y = -(_noteInfo.height >> 1);
+                this.addChild(_note);
+            }
+
+            GenerateIndex();
+        }
+
+        private function GenerateIndex():void
+        {
+            this.index = (NoteBlitting.directionTable.indexOf(this.DIR) * 10) + NoteBlitting.noteColorsTable.indexOf(COLOR);
+        }
+
+        public function GetIndex():int
+        {
+            return this.index;
         }
 
         public function dispose():void
         {
-            if (_note != null && this.contains(_note))
+            if (_note != null && this.contains(_note) && _gvars.options && !_gvars.options.BLITTING)
             {
                 this.removeChild(_note);
             }
 
             _note = null;
         }
-
     }
-
 }

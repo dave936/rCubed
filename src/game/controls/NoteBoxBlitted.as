@@ -11,11 +11,18 @@ package game.controls
     import flash.display.Sprite;
     import flash.display.MovieClip;
     import com.flashfla.utils.ObjectPool;
+    import flash.display.Bitmap;
+    import flash.display.BitmapData;
+    import rendering.NoteBlitting;
+    import flash.system.System;
+    import flash.geom.Rectangle;
 
-    public class NoteBox extends Sprite
+    public class NoteBoxBlitted extends Sprite
     {
+        // Global References
         private var _gvars:GlobalVariables = GlobalVariables.instance;
         private var _noteskins:Noteskins = Noteskins.instance;
+
         private var options:GameOptions;
         private var song:Song;
 
@@ -23,25 +30,31 @@ package game.controls
         private var readahead:Number;
         private var totalNotes:int;
         private var noteCount:int;
+
         private var notePool:Array;
-        public var notes:Array;
+        public var notes:Vector.<GameNote> = new Vector.<GameNote>;
 
         public var receptorHeldDown:Array = [];
+
         public var leftReceptor:MovieClip;
         public var downReceptor:MovieClip;
         public var upReceptor:MovieClip;
         public var rightReceptor:MovieClip;
+
+        public var canvasRectangle:Rectangle;
+        private var blittingTarget:BitmapData;
+        private var blittingBitmap:Bitmap;
+
         public var receptorArray:Array;
         public var positionOffsetMax:Object;
         private var sideScroll:Boolean;
         private var receptorAlpha:Number;
 
-        public function NoteBox(song:Song, options:GameOptions)
+        public function NoteBoxBlitted(song:Song, options:GameOptions)
         {
             this.song = song;
             this.options = options;
 
-            notes = [];
             notePool = [];
             for each (var item:Object in _noteskins.data)
             {
@@ -59,11 +72,17 @@ package game.controls
                             var gameNote:GameNote = pool.addObject(new GameNote(0, direction, colour, 1 * 1000, 0, 0, options.noteskin));
                             gameNote.visible = false;
                             pool.unmarkObject(gameNote);
-                            addChild(gameNote);
+
+                            if (!options.BLITTING)
+                            {
+                                addChild(gameNote);
+                            }
                         }
                     }
                 }
             }
+
+            NoteBlitting.CacheNoteskin(options.noteskin)
 
             if (notePool[options.noteskin] == null)
             {
@@ -79,16 +98,31 @@ package game.controls
             rightReceptor = _noteskins.getReceptor(options.noteskin, "R");
             rightReceptor.KEY = "Right";
 
-            addChild(leftReceptor);
-            addChild(downReceptor);
-            addChild(upReceptor);
-            addChild(rightReceptor);
+            if (!options.BLITTING)
+            {
+                addChild(leftReceptor);
+                addChild(downReceptor);
+                addChild(upReceptor);
+                addChild(rightReceptor);
+            }
+            else
+            {
+                addChild(leftReceptor);
+                addChild(downReceptor);
+                addChild(upReceptor);
+                addChild(rightReceptor);
+
+                canvasRectangle = new Rectangle(0, 0, _gvars.gameMain.stage.stageWidth * 0.5, _gvars.gameMain.stage.stageHeight)
+                blittingTarget = new BitmapData(canvasRectangle.width, canvasRectangle.height, true, 0x00000000);
+                blittingBitmap = new Bitmap(blittingTarget)
+                blittingTarget.fillRect(canvasRectangle, 0x00000000);
+                addChild(blittingBitmap);
+            }
 
             sideScroll = options.scrollDirection == "left" || options.scrollDirection == "right";
             scrollSpeed = options.scrollSpeed * (sideScroll ? 1.5 : 1);
             readahead = (sideScroll ? Main.GAME_WIDTH : Main.GAME_HEIGHT) / 300 * 1000 / scrollSpeed;
             receptorAlpha = 1.0;
-            notes = new Array();
             noteCount = 0;
             totalNotes = song.totalNotes;
         }
@@ -129,10 +163,6 @@ package game.controls
             if (options.DISABLE_NOTE_POOL)
             {
                 var gameNote:GameNote = new GameNote(noteCount++, direction, colour, (note.time + 0.5 / 30) * 1000, note.frame, 0, options.noteskin);
-            }
-            else if (options.BLITTING)
-            {
-
             }
             else
             {
@@ -265,13 +295,25 @@ package game.controls
 
         public function update(position:int):void
         {
+            CalculateNextNotes(position);
+            UpdateReceptorMods();
+            UpdateReceptorsHeldDown();
+            UpdateNotePositions(position);
+            NoteBlitting.RenderNotes(canvasRectangle, blittingTarget, notes);
+        }
+
+        private function CalculateNextNotes(position:int):void
+        {
             var nextRef:Note = nextNote;
             while (nextRef && (nextRef.time + 0.5 / 30) * 1000 - position < readahead)
             {
                 spawnArrow(nextRef, position);
                 nextRef = nextNote;
             }
+        }
 
+        private function UpdateReceptorMods():void
+        {
             if (options.modEnabled("wave"))
             {
                 var waveOffset:int = 0;
@@ -314,7 +356,10 @@ package game.controls
                 upReceptor.alpha = (upReceptor.currentFrame == 1) ? 0.0 : receptorAlpha;
                 rightReceptor.alpha = (rightReceptor.currentFrame == 1) ? 0.0 : receptorAlpha;
             }
+        }
 
+        private function UpdateReceptorsHeldDown():void
+        {
             for (var name:String in receptorHeldDown)
             {
                 if (receptorHeldDown[name])
@@ -325,22 +370,20 @@ package game.controls
                     }
                 }
             }
+        }
 
+        private function UpdateNotePositions(position:int):void
+        {
             for each (var note:GameNote in notes)
             {
                 updateNotePosition(note, position);
             }
         }
 
-        private var updateReceptorRef:MovieClip;
-        private var updateOffsetRef:Number;
-        private var updateBaseOffsetRef:Number;
-
         public function updateNotePosition(note:GameNote, position:int):void
         {
-            updateReceptorRef = getReceptor(note.DIR);
-            updateOffsetRef = (note.POSITION - position) / 1000 * 300 * scrollSpeed;
-            updateBaseOffsetRef = (position - note.SPAWN_PROGRESS) / (note.POSITION - note.SPAWN_PROGRESS);
+            var updateReceptorRef:MovieClip = getReceptor(note.DIR);
+            var updateOffsetRef:Number = (note.POSITION - position) / 1000 * 300 * scrollSpeed;
 
             if (updateReceptorRef.VERTEX == "x")
             {
@@ -352,6 +395,13 @@ package game.controls
                 note.y = updateReceptorRef.y - updateOffsetRef * updateReceptorRef.DIRECTION;
                 note.x = updateReceptorRef.x;
             }
+
+            UpdateNoteMods(note, position, updateReceptorRef);
+        }
+
+        private function UpdateNoteMods(note:GameNote, position:int, updateReceptorRef:MovieClip):void
+        {
+            var updateBaseOffsetRef:Number = (position - note.SPAWN_PROGRESS) / (note.POSITION - note.SPAWN_PROGRESS);
 
             // Position Mods
             if (options.modEnabled("tornado"))
@@ -402,14 +452,37 @@ package game.controls
             {
                 note.scaleX = note.scaleY = 1 - (updateBaseOffsetRef * 0.65);
             }
-
         }
 
-        private var removeNoteIndex:int = 0;
-        private var removeNoteRef:GameNote;
-
-        public function removeNote(id:int):void
+        public function removeNote(id:int):Boolean
         {
+            var removedNote:Boolean = false;
+
+            if (!options.BLITTING)
+            {
+                removeNoteStandard(id)
+            }
+            else
+            {
+                for (var noteIndex:int = 0; noteIndex < notes.length; noteIndex++)
+                {
+                    if (notes[noteIndex].ID == id)
+                    {
+                        notes.removeAt(noteIndex);
+                        removedNote = true;
+                        break;
+                    }
+                }
+            }
+
+            return removedNote;
+        }
+
+        private function removeNoteStandard(id:int):void
+        {
+            var removeNoteIndex:int = 0;
+            var removeNoteRef:GameNote;
+
             for (removeNoteIndex = 0; removeNoteIndex < notes.length; removeNoteIndex++)
             {
                 removeNoteRef = notes[removeNoteIndex];
@@ -419,13 +492,14 @@ package game.controls
                     {
                         notePool[removeNoteRef.NOTESKIN][removeNoteRef.DIR][removeNoteRef.COLOR].unmarkObject(removeNoteRef);
                         removeNoteRef.visible = false;
+                        notes.removeAt(removeNoteIndex);
                     }
                     else
                     {
                         removeChild(removeNoteRef);
+                        notes.removeAt(removeNoteIndex);
                     }
 
-                    notes.splice(removeNoteIndex, 1);
                     break;
                 }
             }
@@ -433,21 +507,25 @@ package game.controls
 
         public function reset():void
         {
-            for each (var note:GameNote in notes)
+            if (!options.BLITTING)
             {
-                if (!options.DISABLE_NOTE_POOL)
+                for each (var note:GameNote in notes)
                 {
-                    notePool[note.NOTESKIN][note.DIR][note.COLOR].unmarkObject(note);
-                    note.visible = false;
-                }
-                else
-                {
-                    removeChild(note);
+                    if (!options.DISABLE_NOTE_POOL)
+                    {
+                        notePool[note.NOTESKIN][note.DIR][note.COLOR].unmarkObject(note);
+                        note.visible = false;
+                    }
+                    else
+                    {
+                        removeChild(note);
+                    }
                 }
             }
 
-            notes = new Array();
+            notes = notes.splice(0, 0);
             noteCount = 0;
+            System.gc();
         }
 
         public function resetNoteCount(value:int):void
@@ -463,17 +541,19 @@ package game.controls
             var noteScale:Number = options.noteScale;
             var centerOffset:int = 160;
 
-            //if (data.width > 64)
-            //gap += data.width - 64;
-
             // User-defined note scale
             if (noteScale != 1)
             {
                 if (noteScale < 0.1)
+                {
                     noteScale = 0.1; // min
+                }
                 else if (noteScale > 2.0)
+                {
                     noteScale = 2.0; // max
-                gap *= noteScale
+                }
+
+                gap *= noteScale;
             }
             else if (options.modEnabled("mini") && !options.modEnabled("mini_resize"))
             {
@@ -705,17 +785,24 @@ package game.controls
             }
 
             if (options.noteScale != 1.0)
+            {
                 downReceptor.scaleX = downReceptor.scaleY = leftReceptor.scaleX = leftReceptor.scaleY = upReceptor.scaleX = upReceptor.scaleY = rightReceptor.scaleX = rightReceptor.scaleY = options.noteScale;
+            }
 
             if (options.modEnabled("mini") && !options.modEnabled("mini_resize") && options.noteScale == 1.0)
+            {
                 downReceptor.scaleX = downReceptor.scaleY = leftReceptor.scaleX = leftReceptor.scaleY = upReceptor.scaleX = upReceptor.scaleY = rightReceptor.scaleX = rightReceptor.scaleY = 0.75;
-
+            }
 
             if (options.modEnabled("mini_resize") && !options.modEnabled("mini") && options.noteScale == 1.0)
+            {
                 downReceptor.scaleX = downReceptor.scaleY = leftReceptor.scaleX = leftReceptor.scaleY = upReceptor.scaleX = upReceptor.scaleY = rightReceptor.scaleX = rightReceptor.scaleY = 0.5;
+            }
 
             if (options.modEnabled("dark"))
+            {
                 receptorAlpha = 0.3;
+            }
 
             leftReceptor.alpha = downReceptor.alpha = upReceptor.alpha = rightReceptor.alpha = receptorAlpha;
         }
