@@ -1663,7 +1663,7 @@ package game
 
             noteBoxPositionDefault = interfaceLayout(LAYOUT_RECEPTORS);
 
-            interfacePosition(noteBox, interfaceLayout(LAYOUT_RECEPTORS));
+            interfacePosition(noteBox, {x: 0, y: 0});
             interfacePosition(player1Judge, interfaceLayout(LAYOUT_JUDGE));
             interfacePosition(player1Life, interfaceLayout(LAYOUT_HEALTH));
             interfacePosition(score, interfaceLayout(LAYOUT_SCORE));

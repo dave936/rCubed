@@ -1,14 +1,13 @@
 package rendering
 {
     import classes.Noteskins;
-    import classes.chart.Note;
-    import flash.display.Bitmap;
     import flash.display.BitmapData;
     import flash.geom.Rectangle;
     import flash.geom.Point;
     import classes.GameNote;
     import flash.display.Sprite;
     import flash.geom.Matrix;
+    import flash.geom.ColorTransform;
 
     public class NoteBlitting
     {
@@ -23,16 +22,15 @@ package rendering
         public static const noteColorsTable:Array = ["red", "blue", "purple", "yellow", "pink", "orange", "cyan", "green", "white"];
 
         private static var notePoint:Point = new Point(0, 0);
+        private static var notePointOffset:Point = new Point(0, 0);
+        private static var alphaTransform:ColorTransform = new ColorTransform(1.0, 1.0, 1.0, 1.0)
 
         public static function RenderNotes(canvasRectangle:Rectangle, drawTarget:BitmapData, notesToDraw:Vector.<GameNote>):void
         {
-            // THE FOLLOWING IS EXAMPLE CODE:
-            // NOTE: Draw from the top->down.
-
             drawTarget.fillRect(canvasRectangle, 0x00000000);
 
             // Create a shape to read from a bitmap.
-            var noteRect:Rectangle = new Rectangle(0, 0, 64, 64);
+            var noteRect:Rectangle = new Rectangle(0, 0, 0, 0);
             var noteMatrix:Matrix = new Matrix();
 
             for each (var note:GameNote in notesToDraw)
@@ -44,6 +42,9 @@ package rendering
                 // Get the source bitmap to draw.
                 var index:int = note.GetIndex();
                 var noteBitmap:BitmapData = noteskinsCache[note.GetIndex()]
+
+                noteRect.width = noteBitmap.width;
+                noteRect.height = noteBitmap.height;
 
                 noteRect.width = noteBitmap.width;
                 noteRect.height = noteBitmap.height;
@@ -61,13 +62,19 @@ package rendering
                     noteMatrix.scale(note.scaleX, note.scaleY);
                 }
 
+                if (note.alpha != 1.0)
+                {
+                    alphaTransform.alphaMultiplier = note.alpha;
+                }
+
                 noteMatrix.translate(noteRect.left + (noteRect.width / 2), noteRect.top + (noteRect.height / 2));
 
                 var noteClone:BitmapData = new BitmapData(noteBitmap.width, noteBitmap.height, true, 0x00000000);
-                noteClone.draw(noteBitmap, noteMatrix);
+                noteClone.draw(noteBitmap, noteMatrix, alphaTransform);
 
                 // Copy the pixels to the appropriate position on the screen.
-                drawTarget.copyPixels(noteClone, noteRect, notePoint, null, null, true);
+                notePointOffset.x = -1 * noteRect.width / 2;
+                drawTarget.copyPixels(noteClone, noteRect, notePointOffset.add(notePoint), null, null, true);
 
                 // Use a static to avoid new() (Undo offset).
                 notePoint.x -= note.x;
@@ -106,7 +113,7 @@ package rendering
                                 var rect:Rectangle = new Rectangle(0, 0, noteskinSprite0.width, noteskinSprite0.height);
                                 var matrix:Matrix = new Matrix();
                                 matrix.translate(-(rect.left + (rect.width / 2)), -(rect.top + (rect.height / 2)));
-                                matrix.rotate(rotationTable[directionIndex] * Math.PI);
+                                matrix.rotate(Math.round((rotationTable[directionIndex] / 180) * Math.PI));
                                 matrix.translate(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
                                 noteskinBitmap = new BitmapData(noteskinSprite0.width, noteskinSprite0.height, true, 0x00000000)
                                 noteskinBitmap.draw(noteskinSprite0, matrix);

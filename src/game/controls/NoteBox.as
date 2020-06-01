@@ -130,10 +130,6 @@ package game.controls
             {
                 var gameNote:GameNote = new GameNote(noteCount++, direction, colour, (note.time + 0.5 / 30) * 1000, note.frame, 0, options.noteskin);
             }
-            else if (options.BLITTING)
-            {
-
-            }
             else
             {
                 var spawnPoolRef:ObjectPool = notePool[options.noteskin][direction][colour];

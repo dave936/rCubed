@@ -112,7 +112,7 @@ package game.controls
                 addChild(upReceptor);
                 addChild(rightReceptor);
 
-                canvasRectangle = new Rectangle(0, 0, _gvars.gameMain.stage.stageWidth * 0.5, _gvars.gameMain.stage.stageHeight)
+                canvasRectangle = new Rectangle(0, 0, _gvars.gameMain.stage.stageWidth, _gvars.gameMain.stage.stageHeight)
                 blittingTarget = new BitmapData(canvasRectangle.width, canvasRectangle.height, true, 0x00000000);
                 blittingBitmap = new Bitmap(blittingTarget)
                 blittingTarget.fillRect(canvasRectangle, 0x00000000);
@@ -189,10 +189,18 @@ package game.controls
             }
 
             gameNote.SPAWN_PROGRESS = gameNote.POSITION - 1000; // readahead;
-            gameNote.rotation = getReceptor(direction).rotation;
+
+            var degreeRotation:Number = getReceptor(direction).rotation;
+            var positiveDegreeRotation:Number = (degreeRotation < 0 ? degreeRotation + 360 : degreeRotation);
+
+            gameNote.rotation = Math.PI * (positiveDegreeRotation / 180);
 
             if (options.modEnabled("_spawn_noteskin_data_rotation"))
-                gameNote.rotation = noteRealSpawnRotation(direction, options.noteskin);
+            {
+                degreeRotation = noteRealSpawnRotation(direction, options.noteskin);
+                positiveDegreeRotation = (degreeRotation < 0 ? degreeRotation + 360 : degreeRotation);
+                gameNote.rotation = Math.PI * (positiveDegreeRotation / 180);
+            }
 
             if (options.noteScale != 1.0)
             {
@@ -420,12 +428,14 @@ package game.controls
             // Rotation Mods
             if (options.modEnabled("rotating"))
             {
-                note.rotation = (updateBaseOffsetRef * 6 * 90) + updateReceptorRef.rotation;
+                var degreeRotation:Number = ((updateBaseOffsetRef * 6 * 90) + updateReceptorRef.rotation);
+                var positiveDegreeRotation:Number = (degreeRotation < 0 ? degreeRotation + 360 : degreeRotation);
+                note.rotation = Math.PI * (degreeRotation / 180);
             }
 
             if (options.modEnabled("dizzy"))
             {
-                note.rotation += 18;
+                note.rotation += Math.PI * (18 / 180);
             }
 
             // Alpha Mods
@@ -539,7 +549,7 @@ package game.controls
             var rotation:Number = data.rotation;
             var gap:int = options.receptorSpacing;
             var noteScale:Number = options.noteScale;
-            var centerOffset:int = 160;
+            var centerOffset:int = 390;
 
             // User-defined note scale
             if (noteScale != 1)
