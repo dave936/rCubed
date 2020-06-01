@@ -1661,7 +1661,7 @@ package game
             else
                 defaultLayout[LAYOUT_MP_HEADER + (mpSpectate ? "2" : "1")] = {x: 690, y: 190, properties: {alignment: MPHeader.ALIGN_RIGHT}};
 
-            noteBoxPositionDefault = interfaceLayout(LAYOUT_RECEPTORS);
+            noteBoxPositionDefault = {x: 0, y: 0};
 
             interfacePosition(noteBox, {x: 0, y: 0});
             interfacePosition(player1Judge, interfaceLayout(LAYOUT_JUDGE));
