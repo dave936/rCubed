@@ -8,6 +8,7 @@ package rendering
     import flash.display.Sprite;
     import flash.geom.Matrix;
     import flash.geom.ColorTransform;
+    import flash.display.Bitmap;
 
     public class NoteBlitting
     {
@@ -17,6 +18,7 @@ package rendering
         // Local Statics
         private static var noteskinsCache:Vector.<BitmapData>;
         public static const rotationTable:Vector.<Number> = new <Number>[0.5, 1, 0, 1.5];
+        public static const rotationTableFlat:Vector.<Number> = new <Number>[0, 0, 0, 0];
 
         public static const directionTable:Array = ["L", "U", "D", "R"];
         public static const noteColorsTable:Array = ["red", "blue", "purple", "yellow", "pink", "orange", "cyan", "green", "white"];
@@ -33,6 +35,9 @@ package rendering
             var noteRect:Rectangle = new Rectangle(0, 0, 0, 0);
             var noteMatrix:Matrix = new Matrix();
 
+            // Rotation bitmap for uneven bitmaps.
+            var rotBM:Bitmap = new Bitmap(null);
+
             for each (var note:GameNote in notesToDraw)
             {
                 // Use a static to avoid new() (Apply offset).
@@ -46,15 +51,15 @@ package rendering
                 noteRect.width = noteBitmap.width;
                 noteRect.height = noteBitmap.height;
 
-                noteRect.width = noteBitmap.width;
-                noteRect.height = noteBitmap.height;
+                rotBM.bitmapData = noteBitmap
+                rotBM.rotation = note.rotationOffset;
 
                 noteMatrix.identity();
                 noteMatrix.translate(-(noteRect.left + (noteRect.width / 2)), -(noteRect.top + (noteRect.height / 2)));
 
-                if (note.rotation != 0)
+                if (note.rotationOffset != 0)
                 {
-                    noteMatrix.rotate(note.rotation);
+                    noteMatrix.rotate(note.rotationOffset);
                 }
 
                 if (note.scaleX != 1.0 || note.scaleY != 1.0)
@@ -67,7 +72,7 @@ package rendering
                     alphaTransform.alphaMultiplier = note.alpha;
                 }
 
-                noteMatrix.translate(noteRect.left + (noteRect.width / 2), noteRect.top + (noteRect.height / 2));
+                noteMatrix.translate(noteRect.left + (rotBM.width / 2), noteRect.top + (rotBM.height / 2));
 
                 var noteClone:BitmapData = new BitmapData(noteBitmap.width, noteBitmap.height, true, 0x00000000);
                 noteClone.draw(noteBitmap, noteMatrix, alphaTransform);
@@ -89,6 +94,9 @@ package rendering
             {
                 var notes:Object = noteskinsData["notes"];
                 noteskinsCache = new Vector.<BitmapData>();
+
+                var activeRotationRable:Vector.<Number> = (noteskinsData["rotation"] == 0 ? rotationTableFlat : rotationTable)
+
                 for (var directionIndex:int = 0; directionIndex < directionTable.length; directionIndex++)
                 {
                     for (var colorIndex:int = 0; colorIndex < noteColorsTable.length; colorIndex++)
@@ -110,11 +118,17 @@ package rendering
                             if (noteSkinObject == null)
                             {
                                 var noteskinSprite0:Sprite = new notesColor["D"];
+                                var rotBitmapData:BitmapData = new BitmapData(noteskinSprite0.width, noteskinSprite0.height, true, 0x00000000)
+                                rotBitmapData.draw(noteskinSprite0);
+                                var rotBM:Bitmap = new Bitmap(rotBitmapData);
+                                rotBM.rotation = Math.round((activeRotationRable[directionIndex] / 180) * Math.PI);
+
                                 var rect:Rectangle = new Rectangle(0, 0, noteskinSprite0.width, noteskinSprite0.height);
                                 var matrix:Matrix = new Matrix();
                                 matrix.translate(-(rect.left + (rect.width / 2)), -(rect.top + (rect.height / 2)));
-                                matrix.rotate(Math.round((rotationTable[directionIndex] / 180) * Math.PI));
-                                matrix.translate(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+                                matrix.rotate(activeRotationRable[directionIndex] * Math.PI);
+                                matrix.translate(rect.left + (rotBM.width / 2), rect.top + (rotBM.height / 2));
+
                                 noteskinBitmap = new BitmapData(noteskinSprite0.width, noteskinSprite0.height, true, 0x00000000)
                                 noteskinBitmap.draw(noteskinSprite0, matrix);
                                 noteskinsCache.push(noteskinBitmap);

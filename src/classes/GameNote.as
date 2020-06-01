@@ -19,6 +19,7 @@ package classes
         public var PROGRESS:int = 0;
         public var PLAYER:int = 0;
         public var SPAWN_PROGRESS:int = 0;
+        public var rotationOffset:Number = 0;
         private var index:int;
 
         public function GameNote(id:int, dir:String, color:String, position:int = 0, progress:int = 0, player:int = 0, activeNoteSkin:int = 1)
