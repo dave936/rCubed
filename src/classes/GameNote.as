@@ -3,6 +3,7 @@ package classes
     import flash.display.MovieClip;
     import flash.display.Sprite;
     import rendering.NoteBlitting;
+    import popups.PopupOptions;
 
     public class GameNote extends MovieClip
     {
@@ -30,7 +31,7 @@ package classes
             this.PROGRESS = progress;
             this.PLAYER = player;
 
-            if (_gvars.options == null || !_gvars.options.BLITTING)
+            if (_gvars.options == null || _gvars.options.isEditor || !_gvars.options.BLITTING || _gvars.gameMain.current_popup is PopupOptions)
             {
                 var _noteInfo:Object = _noteskins.getInfo(activeNoteSkin);
                 _note = _noteskins.getNote(activeNoteSkin, this.COLOR, this.DIR);
